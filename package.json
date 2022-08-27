@@ -1,6 +1,6 @@
 {
-  "name": "rocket-vscode-template",
-  "displayName": "rocket-vscode-template",
+  "name": "afe-vscode-template",
+  "displayName": "afe-vscode-template",
   "description": "",
   "version": "0.0.1",
   "publisher": "yuhubing",
@@ -11,20 +11,20 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:rocket-vscode-template"
+    "onCommand:afe-vscode-template"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "rocket-vscode-template",
-        "title": "rocket-vscode-template"
+        "command": "afe-vscode-template",
+        "title": "afe-vscode-template"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "rocket-vscode-template",
+          "command": "afe-vscode-template",
           "group": "navigation"
         }
       ]

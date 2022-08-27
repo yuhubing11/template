@@ -1,7 +1,16 @@
 import * as shell from 'shelljs';
 import * as vscode from "vscode";
-import * as fs from 'fs';
+// import * as fs from 'fs';
 import * as path from 'path';
+
+const fs = require('fs')
+
+import { vsWebView } from './constant';
+
+// /** 主要版本 */
+// let major = process.version.match(/v([0-9]*).([0-9]*)/)[1]
+// /** 特性版本 */
+// let minor = process.version.match(/v([0-9]*).([0-9]*)/)[2]
 
 export class MakeDirTemplate {
   config: any;
@@ -9,16 +18,25 @@ export class MakeDirTemplate {
   panel!: vscode.WebviewPanel;
   webView!: vscode.Webview;
   tag: string;
-  constructor(config: any, url: any, tag: string) {
+  rootPath: string;
+  isJudge: boolean;
+  json
+  constructor(config: any, url: any, tag: string, json: any) {
     this.config = config;
     this.url = url;
     this.tag = tag;
+    this.rootPath = '';
+    this.isJudge = false;
+    this.json = json;
+    // this.readDir(url.path.replace(/\\/g,'/').replace('/',''))
     this.init();
+
   }
   init() {
     if (!this.checkPosition()) {
       return;
     }
+
     this.panel = vscode.window.createWebviewPanel(
       'testWebview', // viewType
       "请填写目录名", // 视图标题
@@ -31,123 +49,58 @@ export class MakeDirTemplate {
     this.webView = this.panel.webview;
     this.loadHtml();
     this.addListener();
+
   }
+
   checkPosition() {
-    if (!this.url.path.includes("src/pages")) {
-      vscode.window.showErrorMessage("鼠标必须选中src/pages");
-      return false;
+    if (Object.keys(this.json).length > 0) {
+      if (!this.url.path.includes(`${this.json.allowCreatePath && this.json.allowCreatePath || 'src/pages'}`)) {
+        vscode.window.showErrorMessage(`鼠标必须选中${this.json.allowCreatePath && this.json.allowCreatePath || 'src/pages'}`);
+        return false;
+      }
+    } else {
+      if (!this.url.path.includes("src/pages")) {
+        vscode.window.showErrorMessage("鼠标必须选中src/pages");
+        return false;
+      }
     }
+
     return true;
   }
   loadHtml() {
+
+
     if (this.webView) {
-      this.webView.html = `<!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Cat Coding</title>
-        </head>
-        <body>
-          <div
-            style="width: 300px; margin-top: 24px; display: flex; align-items: center"
-          >
-            输入目录名称
-            <input
-              id="dirName"
-              style="flex-grow: 1; height: 30px; margin-left: 16px"
-              placeholder="目录可以包含/"
-            />
-          </div>
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              width: 300px;
-              margin-top: 24px;
-            "
-          >
-            <div
-              id="cancelBtn"
-              style="
-                width: 80px;
-                height: 30px;
-                border-radius: 4px;
-                border: 1px solid #ededed;
-                line-height: 30px;
-                text-align: center;
-              "
-            >
-              取消
-            </div>
-            <div
-              id="confirmBtn"
-              style="
-                width: 80px;
-                height: 30px;
-                color: #000;
-                background-color: rgb(66, 144, 245);
-                border-radius: 4px;
-                border: none;
-                line-height: 30px;
-                text-align: center;
-              "
-            >
-              确定
-            </div>
-          </div>
-
-          <script>
-            (function () {
-              var vscode = acquireVsCodeApi();
-              var submit = document.getElementById("confirmBtn");
-              var cancel = document.getElementById("cancelBtn");
-              var dirName = document.getElementById("dirName");
-              cancel.onclick = function () {
-                vscode.postMessage({
-                  code: -1,
-                });
-              };
-
-              submit.onclick = function () {
-                if (!dirName.value) {
-                  vscode.postMessage({
-                    code: -1,
-                  });
-                  return;
-                }
-                vscode.postMessage({ // 向插件发送消息
-                  code: 0,
-                  data: {
-                    dirName: dirName.value,
-                  },
-                });
-              };
-
-              dirName.onkeydown = function (e) {
-                if(e.keyCode==13){
-                  if (!dirName.value) {
-                    vscode.postMessage({
-                      code: -1,
-                    });
-                    return;
-                  }
-                  vscode.postMessage({ // 向插件发送消息
-                    code: 0,
-                    data: {
-                      dirName: dirName.value,
-                    },
-                  });
-                }
-              };
-            })();
-          </script>
-        </body>
-      </html>`;
+      this.webView.html = vsWebView;
     }
 
   }
-
+  cpSync(source: any, destination: any) {
+    // 判断node版本不是16.7.0以上的版本
+    // 则进入兼容处理
+    // 这样处理是因为16.7.0的版本支持了直接复制文件夹的操作
+    // if (Number(major) < 16 || Number(major) == 16 && Number(minor) < 7) {
+      // 如果存在文件夹 先递归删除该文件夹
+      if (fs.existsSync(destination)) fs.rmSync(destination, { recursive: true })
+      // 新建文件夹 递归新建
+      fs.mkdirSync(destination, { recursive: true });
+      // 读取源文件夹
+      let rd = fs.readdirSync(source)
+      for (const fd of rd) {
+        // 循环拼接源文件夹/文件全名称
+        let sourceFullName = source + "/" + fd;
+        // 循环拼接目标文件夹/文件全名称
+        let destFullName = destination + "/" + fd;
+        // 读取文件信息
+        let lstatRes = fs.lstatSync(sourceFullName)
+        // 是否是文件
+        if (lstatRes.isFile()) fs.copyFileSync(sourceFullName, destFullName);
+        // 是否是文件夹
+        if (lstatRes.isDirectory()) this.cpSync(sourceFullName, destFullName);
+      }
+    // }
+    // else fs.cpSync(source, destination, { force: true, recursive: true })
+  }
   addListener() {
     if (!this.panel) {
       return;
@@ -178,8 +131,11 @@ export class MakeDirTemplate {
     //需要创建的模板目录
     const dirPath = path.join(workDir, dirName);
     shell.mkdir("-p", dirPath);
-
-    this.createIndexTsx(`${dirPath}/index.tsx`, dirName);
+    if (this.json.isCustomTemplate && this.json.customTeplate) {
+      this.cpSync(`${this.json.rootPath}/template`,dirPath)
+    } else {
+      this.createIndexTsx(`${dirPath}/index.tsx`, dirName);
+    }
     // this.createIndexScss(`${dirPath}/.module.scss`);
 
     shell.exit(1);
@@ -204,7 +160,7 @@ export class MakeDirTemplate {
       }
     }
   }
-  createIndexTsx(fileName: fs.PathLike, dirName: string) {
+  createIndexTsx(fileName: any, dirName: string) {
     let str = dirName[0].toUpperCase() + dirName.slice(1);
     if (/-/.test(dirName)) {
       const arr = dirName.split('-');
