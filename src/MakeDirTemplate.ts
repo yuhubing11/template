@@ -3,9 +3,9 @@ import * as vscode from "vscode";
 // import * as fs from 'fs';
 import * as path from 'path';
 
-const fs = require('fs')
+const fs = require('fs');
 
-import { vsWebView } from './constant';
+import { vsWebView,innerTemplate } from './constant';
 
 // /** 主要版本 */
 // let major = process.version.match(/v([0-9]*).([0-9]*)/)[1]
@@ -20,18 +20,43 @@ export class MakeDirTemplate {
   tag: string;
   rootPath: string;
   isJudge: boolean;
-  json
-  constructor(config: any, url: any, tag: string, json: any) {
+  json:any;
+  constructor(config: any, url: any, tag: string) {
     this.config = config;
     this.url = url;
     this.tag = tag;
     this.rootPath = '';
     this.isJudge = false;
-    this.json = json;
+    this.json = {};
     // this.readDir(url.path.replace(/\\/g,'/').replace('/',''))
-    this.init();
+    this.readDir(url.path.replace(/\\/g,'/').replace('/',''),url);
 
   }
+    readDir = async(url: any,originUrl:any) => {
+    const dirInfo =await fs.readdirSync(url);
+    dirInfo.map((item: any)=>{
+     if(item==='package.json'){
+      this.isJudge=true;
+     }
+    });
+    if(this.isJudge){
+      try{
+        const j = JSON.parse(fs.readFileSync(`${url}/template.json`,'utf-8'));
+          j.rootPath=url;
+          this.json=j;
+          this.init();
+      }catch{
+        this.json={};
+        this.init();
+      }
+    }else{
+      const pa = path.dirname(url);
+      this.readDir(pa.replace(/\\/g,'/'),originUrl);
+    }
+  };
+
+
+
   init() {
     if (!this.checkPosition()) {
       return;
@@ -81,22 +106,22 @@ export class MakeDirTemplate {
     // 这样处理是因为16.7.0的版本支持了直接复制文件夹的操作
     // if (Number(major) < 16 || Number(major) == 16 && Number(minor) < 7) {
       // 如果存在文件夹 先递归删除该文件夹
-      if (fs.existsSync(destination)) fs.rmSync(destination, { recursive: true })
+      if (fs.existsSync(destination)) {fs.rmSync(destination, { recursive: true });};
       // 新建文件夹 递归新建
       fs.mkdirSync(destination, { recursive: true });
       // 读取源文件夹
-      let rd = fs.readdirSync(source)
+      let rd = fs.readdirSync(source);
       for (const fd of rd) {
         // 循环拼接源文件夹/文件全名称
         let sourceFullName = source + "/" + fd;
         // 循环拼接目标文件夹/文件全名称
         let destFullName = destination + "/" + fd;
         // 读取文件信息
-        let lstatRes = fs.lstatSync(sourceFullName)
+        let lstatRes = fs.lstatSync(sourceFullName);
         // 是否是文件
-        if (lstatRes.isFile()) fs.copyFileSync(sourceFullName, destFullName);
+        if (lstatRes.isFile()) {fs.copyFileSync(sourceFullName, destFullName);}
         // 是否是文件夹
-        if (lstatRes.isDirectory()) this.cpSync(sourceFullName, destFullName);
+        if (lstatRes.isDirectory()) {this.cpSync(sourceFullName, destFullName);}
       }
     // }
     // else fs.cpSync(source, destination, { force: true, recursive: true })
@@ -132,7 +157,7 @@ export class MakeDirTemplate {
     const dirPath = path.join(workDir, dirName);
     shell.mkdir("-p", dirPath);
     if (this.json.isCustomTemplate && this.json.customTeplate) {
-      this.cpSync(`${this.json.rootPath}/template`,dirPath)
+      this.cpSync(`${this.json.rootPath}/template`,dirPath);
     } else {
       this.createIndexTsx(`${dirPath}/index.tsx`, dirName);
     }
@@ -167,37 +192,19 @@ export class MakeDirTemplate {
       str = arr.reduce((pre, item) => {
         const s = item[0].toUpperCase() + item.slice(1);
         pre = pre + s;
-        return pre
+        return pre;
       }, '');
     } else if (/_/.test(dirName)) {
       const arr = dirName.split('_');
       str = arr.reduce((pre, item) => {
         const s = item[0].toUpperCase() + item.slice(1);
         pre = pre + s;
-        return pre
+        return pre;
       }, '');
     }
     const fd = fs.openSync(fileName, 'w');// fs.openSync()方法是fs模块的内置应用程序编程接口，用于返回代表文件描述符的整数值
     // 标记“ r”表示文件已经创建，并且读取创建的文件。标记“ w”表示文件已创建或覆盖
-    fs.writeSync(fd, `import React, { useState } from 'react';
-import { Card } from '@afe/rocket-ui';
-
-
-
-interface Props {
-
-}
-interface State {
-}
-
-
-const ${str} = (props:Props)=>{
-  const [state,setState] = useState<State>({});
-  const changeState = (val)=>setState(old=>({ ...old, ...val }))
-  return <div>hello world!!</div>
-}
-
-export default ${str}`);
+    fs.writeSync(fd, innerTemplate(str));
     fs.closeSync(fd);
   }
   // createIndexScss(fileName: fs.PathLike) {

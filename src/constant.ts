@@ -102,4 +102,19 @@ export const vsWebView =`
           </script>
         </body>
       </html>
-`
+`;
+
+export const innerTemplate=(name:string)=>`import React, { useState } from 'react';
+import { Card } from '@afe/rocket-ui';
+
+interface Props {}
+interface State {}
+
+const ${name} = (props: Props) => {
+  const [state, setState] = useState<State>({});
+  const changeState = (val: any) => setState((old) => ({ ...old, ...val }));
+  return <div>hello world!!</div>;
+};
+
+export default ${name};
+`;
